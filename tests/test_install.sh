@@ -54,4 +54,32 @@ else
     exit 1
 fi
 
+# 5. Verify configuration provisioning
+# Scenario A: Provisioning when no config exists
+CONFIG_FILE="$HOME/.config/inquery/actions.json"
+if [ -f "$CONFIG_FILE" ]; then
+    echo "PASS: Configuration provisioned at $CONFIG_FILE"
+    # Ensure the provisioned file is an exact copy of the default
+    if diff "$CONFIG_FILE" "$APP_ROOT/config/actions.json" > /dev/null; then
+        echo "PASS: Provisioned config matches default config."
+    else
+        echo "FAIL: Provisioned config does not match default."
+        exit 1
+    fi
+else
+    echo "FAIL: Configuration was not provisioned."
+    exit 1
+fi
+
+# Scenario B: No overwriting when config already exists
+echo '{"custom": "data"}' > "$CONFIG_FILE"
+echo "Re-running install.sh to test idempotency..."
+./install.sh
+if grep -q '"custom": "data"' "$CONFIG_FILE"; then
+    echo "PASS: Existing configuration was not overwritten."
+else
+    echo "FAIL: Existing configuration was overwritten!"
+    exit 1
+fi
+
 echo "All installation tests passed."

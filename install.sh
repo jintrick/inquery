@@ -33,6 +33,20 @@ sed "s|/path/to/inquery|$APP_ROOT|g" "$APP_ROOT/assets/inquery.desktop.example" 
 chmod +x "$DESKTOP_FILE"
 echo -e "${GREEN}✓${NC} Installed desktop entry at $DESKTOP_FILE"
 
+# 5. Provision default configuration if it doesn't already exist
+# We respect user's existing settings and only provide a default if none exists.
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/inquery"
+CONFIG_FILE="$CONFIG_DIR/actions.json"
+
+mkdir -p "$CONFIG_DIR"
+if [ ! -f "$CONFIG_FILE" ]; then
+    cp "$APP_ROOT/config/actions.json" "$CONFIG_FILE"
+    echo -e "${GREEN}✓${NC} Provisioned default configuration at $CONFIG_FILE"
+else
+    # Maintain user's current settings by not overwriting existing file
+    echo -e "${GREEN}✓${NC} Existing configuration found at $CONFIG_FILE (skipped)"
+fi
+
 echo -e "\n${GREEN}Installation complete!${NC}"
 echo "You can now launch 'inquery' from your application menu or by typing 'inquery' in the terminal."
 echo "Note: Make sure $BIN_DIR is in your PATH."
