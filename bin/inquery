@@ -1,0 +1,16 @@
+#!/bin/bash
+# inquery entry point
+
+# Get the base directory robustly
+APP_ROOT=$(dirname "$(dirname "$(readlink -f "$0")")")
+
+# 1. Get query from user
+QUERY=$(zenity --entry --title="inquery" --text="検索ワードを入力してください:" --width=400)
+
+# If user cancelled or closed the window, exit
+if [ $? -ne 0 ]; then
+    exit 0
+fi
+
+# 2. Call ui wrapper with the query using absolute path
+bash "$APP_ROOT/lib/ui.sh" "$QUERY" "$APP_ROOT"

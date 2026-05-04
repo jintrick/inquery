@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=inquery
+Comment=Zenity-based keyboard-driven search launcher
+# Replace /path/to/inquery with the actual path to bin/inquery
+Exec=/path/to/inquery/bin/inquery
+Icon=search
+Terminal=false
+Categories=Utility;
+Keywords=search;launcher;zenity;
