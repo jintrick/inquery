@@ -14,6 +14,7 @@
 2. **Prefix-Free**: アクション起動のためのプレフィックス入力を禁止する。
 3. **Subject-Predicate Order**: 名詞（検索ワード）入力 → 動詞（アクション）選択の順序を厳守せよ。
 4. **Zenity Interaction**: UIは `zenity` の標準機能（`--entry` および `--list`）を組み合わせて実現せよ。
+5. **Configuration Fallback**: ユーザー設定（`~/.config`）を優先しつつ、システムデフォルトでも即座に動作する堅牢な探索ロジックを維持せよ。
 
 ---
 
@@ -31,12 +32,20 @@
 ```
 inquery/
 ├── bin/
-│   └── inquery         # メインエントリーポイント（Executable Bash/Python script）
+│   └── inquery         # メインエントリーポイント（readlink -f によるパス解決）
 ├── lib/
-│   ├── ui.sh           # Zenity 呼び出しラッパー
-│   └── executor.py     # 実行ロジック（URL置換、subprocess実行）
+│   ├── ui.sh           # Zenity 呼び出しラッパー（XDG設定フォールバック実装）
+│   ├── filter.py       # アクションのフィルタリングロジック（型ヒント付き）
+│   └── executor.py     # 実行ロジック（URL置換、subprocess実行、Zenityエラー通知）
 ├── config/
+│   ├── actions.json    # デフォルト設定
 │   └── actions.json.example
+├── assets/
+│   └── inquery.desktop.example # デスクトップ統合用テンプレート
+├── scripts/
+│   └── run_tests.sh    # テストランナー（静的解析・ユニットテスト・統合テスト）
+├── tests/              # 各種テストコード
+├── install.sh          # 自動インストーラー
 ├── README.md
 ├── GEMINI.md
 └── pyproject.toml
@@ -48,49 +57,32 @@ inquery/
 
 ### `bin/inquery`
 - エントリーポイント。
-- ユーザーからの入力を受け取り（`zenity --entry`）、その結果を `ui.sh` に渡す。
+- 実行ファイルの絶対パスを特定し、ユーザーからの入力を受け取って `ui.sh` に渡す。
 
 ### `lib/ui.sh`
 - `zenity --list` を使用したアクション選択インターフェースの提供。
-- アクションリストを `config/actions.json` から読み込み、表示する。
-- 選択されたアクションとクエリを `executor.py` に渡す。
+- XDG 規約に基づき `actions.json` を優先順位付きで探索する。
+- `filter.py` を呼び出してラベルを抽出し、選択された結果を `executor.py` に渡す。
+
+### `lib/filter.py`
+- アクションリストからのラベル抽出と、クエリに基づいたフィルタリング。
 
 ### `lib/executor.py`
-- アクションの実行。
-- `type: "url"`: URL内の `{query}` を `urllib.parse.quote_plus` で置換し `xdg-open` で開く。
-- `type: "script"`: 引数内の `{query}` を置換し `subprocess.Popen` で非同期実行する。
-
----
-
-## actions.json スキーマ
-
-```json
-{
-  "actions": [
-    {
-      "label": "Googleで検索",
-      "type": "url",
-      "url": "https://www.google.com/search?q={query}"
-    },
-    {
-      "label": "カスタムスクリプト",
-      "type": "script",
-      "script": "/path/to/script.sh",
-      "args": ["{query}"]
-    }
-  ]
-}
-```
+- アクションの実行。URL置換またはスクリプト実行。
+- 失敗時は `zenity --error` を用いてユーザーに通知する。
 
 ---
 
 ## 開発・コーディング規約（High-Signal Standards）
 
-- **UI Implementation**: GTK4/PyGObject を廃止し、`zenity` による実装に一本化せよ。
-- **No Global State**: 依存関係は明示的に引数で渡せ。
-- **Error Handling**: エラー発生時は `zenity --error` でユーザーに通知するか、stderr に出力せよ。
-- **Python Code**: 型ヒント必須。`ruff` でフォーマットせよ。
-- **Atomic Commits**: 機能変更は原子的な単位で行え。
+- **UI Implementation**: `zenity` による実装に一本化せよ。
+- **Type Safety**: Python コードには型ヒントを必須とし、`ruff` でフォーマットせよ。
+- **Distribution Readiness**: 
+    - 全実行スクリプトに実行権限（`+x`）を付与せよ。
+    - `install.sh` による「一発インストール」体験を維持せよ。
+- **Quality Assurance**: 
+    - 変更時は必ず `scripts/run_tests.sh` をパスさせること。
+    - インストーラーやパス解決の挙動は `tests/` 内の統合テストで担保せよ。
 
 ---
 
@@ -99,9 +91,8 @@ inquery/
 | 禁止事項 | 代替行動 |
 |----------|----------|
 | GTK4 / PyGObject の使用 | `zenity` を使用して UI を構築せよ |
-| プレフィックスによるアクション選択 | クエリ入力後のリスト選択、または入力に応じた自動フィルタリングで対応せよ |
-| `sudo` の使用 | ユーザー権限で動作する実装を行え |
-| ブロッキング処理 | 実行（URL/Script）は非同期で行い、UIを即座に解放せよ |
+| 固定の相対パス依存 | `readlink -f` 等を用いた絶対パス解決を行え |
+| ユーザー環境の強制書き換え | 設定ファイルはフォールバック方式で読み込み、インストールは配置に専念せよ |
 
 ---
 
@@ -111,3 +102,5 @@ inquery/
 - [x] 名詞（クエリ）入力後に動詞（アクション）選択画面が表示される
 - [x] 入力内容に応じたアクションのフィルタリング機能が動作する
 - [x] URL置換およびスクリプト実行が正しく機能する
+- [x] テストフレームワークにより品質が自動検証されている
+- [x] 自動インストーラーにより導入の障壁が解消されている
