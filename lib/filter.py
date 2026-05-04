@@ -5,7 +5,8 @@ from typing import List, Dict, Any, Optional
 def filter_actions(query: str, config_path: str) -> List[str]:
     """
     Filters action labels based on the user query.
-    If no matches are found or query is empty, returns all labels.
+    If no matches are found or query is empty, returns all labels (excluding those with 
+    unmatched show_if_contains constraints).
     """
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
@@ -15,17 +16,27 @@ def filter_actions(query: str, config_path: str) -> List[str]:
         sys.exit(1)
 
     actions: List[Dict[str, Any]] = data.get("actions", [])
+    
+    if not query:
+        return [a["label"] for a in actions]
+
     query_lower = query.lower()
+    filtered: List[str] = []
 
-    # Filtering logic: matches query within label
-    filtered: List[str] = [
-        a["label"] for a in actions 
-        if not query or query_lower in a.get("label", "").lower()
-    ]
+    for a in actions:
+        label = a.get("label", "")
+        show_if_contains = a.get("show_if_contains")
+        
+        if query_lower in label.lower():
+            filtered.append(label)
+        elif show_if_contains is not None:
+            if any(char in query for char in show_if_contains):
+                filtered.append(label)
 
-    # Fallback: if filtering results in nothing but a query was provided, return all
+    # Fallback: if filtering results in nothing but a query was provided, 
+    # return all actions that do not have explicit show_if_contains constraints.
     if not filtered:
-        filtered = [a["label"] for a in actions]
+        filtered = [a["label"] for a in actions if a.get("show_if_contains") is None]
 
     return filtered
 

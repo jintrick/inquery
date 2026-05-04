@@ -10,6 +10,27 @@
       "type": "script",
       "script": "~/.config/inquery/scripts/example.sh",
       "args": ["{query}"]
+    },
+    {
+      "label": "Geminiで検索",
+      "type": "url",
+      "url": "https://gemini.google.com/app",
+      "show_if_contains": ["。", "、", ",", "？"],
+      "copy_to_clipboard": true
+    },
+    {
+      "label": "Claudeで検索",
+      "type": "url",
+      "url": "https://claude.ai/new",
+      "show_if_contains": ["。", "、", ",", "？"],
+      "copy_to_clipboard": true
+    },
+    {
+      "label": "Grokで検索",
+      "type": "url",
+      "url": "https://x.com/i/grok",
+      "show_if_contains": ["。", "、", ",", "？"],
+      "copy_to_clipboard": true
     }
   ]
 }

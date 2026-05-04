@@ -12,7 +12,8 @@ class TestFilter(unittest.TestCase):
             "actions": [
                 {"label": "Google Search", "type": "url", "url": "https://google.com?q={query}"},
                 {"label": "GitHub Search", "type": "url", "url": "https://github.com?q={query}"},
-                {"label": "Script Action", "type": "script", "script": "echo", "args": ["{query}"]}
+                {"label": "Script Action", "type": "script", "script": "echo", "args": ["{query}"]},
+                {"label": "Gemini", "type": "url", "url": "https://gemini.com", "show_if_contains": ["。", "、", ",", "？"]}
             ]
         }
         self.config_path = os.path.join(self.test_dir, "actions.json")
@@ -24,8 +25,9 @@ class TestFilter(unittest.TestCase):
 
     def test_filter_empty_query(self):
         labels = filter_actions("", self.config_path)
-        self.assertEqual(len(labels), 3)
+        self.assertEqual(len(labels), 4)
         self.assertIn("Google Search", labels)
+        self.assertIn("Gemini", labels)
 
     def test_filter_exact_match(self):
         labels = filter_actions("Google Search", self.config_path)
@@ -41,9 +43,22 @@ class TestFilter(unittest.TestCase):
         labels = filter_actions("google", self.config_path)
         self.assertEqual(labels, ["Google Search"])
 
-    def test_filter_no_match_returns_all(self):
+    def test_filter_no_match_returns_all_except_conditional(self):
         labels = filter_actions("NonExistent", self.config_path)
         self.assertEqual(len(labels), 3)
+        self.assertNotIn("Gemini", labels)
+
+    def test_show_if_contains_match(self):
+        labels = filter_actions("今日の天気は？", self.config_path)
+        self.assertIn("Gemini", labels)
+
+    def test_show_if_contains_no_match(self):
+        labels = filter_actions("今日の天気", self.config_path)
+        self.assertNotIn("Gemini", labels)
+        
+    def test_show_if_contains_label_match(self):
+        labels = filter_actions("gemini", self.config_path)
+        self.assertIn("Gemini", labels)
 
 if __name__ == "__main__":
     unittest.main()
