@@ -1,0 +1,14 @@
+README.md
+pyproject.toml
+inquery/__init__.py
+inquery/actions.py
+inquery/executor.py
+inquery/main.py
+inquery/window.py
+inquery.egg-info/PKG-INFO
+inquery.egg-info/SOURCES.txt
+inquery.egg-info/dependency_links.txt
+inquery.egg-info/entry_points.txt
+inquery.egg-info/requires.txt
+inquery.egg-info/top_level.txt
+tests/test_actions.py

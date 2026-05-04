@@ -1,0 +1,15 @@
+{
+  "actions": [
+    {
+      "label": "Googleで検索",
+      "type": "url",
+      "url": "https://www.google.com/search?q={query}"
+    },
+    {
+      "label": "スクリプト例",
+      "type": "script",
+      "script": "~/.config/inquery/scripts/example.sh",
+      "args": ["{query}"]
+    }
+  ]
+}
