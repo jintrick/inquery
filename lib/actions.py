@@ -1,5 +1,6 @@
 import json
 import sys
+from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 
 class Action:
@@ -18,7 +19,7 @@ class Action:
     @property
     def type(self) -> str:
         """
-        URLかScriptかを自動判別する。両方ある場合はURLを優先。
+        URLかScriptかを自動判別する。
         """
         if self.url:
             return "url"
@@ -26,27 +27,88 @@ class Action:
             return "script"
         return "unknown"
 
-    def is_clipboard_only(self) -> bool:
-        return self.copy_to_clipboard
-
     def matches_constraint(self, query: str) -> bool:
         """
         クエリが制約条件(show_if_contains)を満たすか判定する。
-        制約がない場合は常にTrueを返す。
         """
         if not self.show_if_contains:
-            return True
+            return False
         return any(char in query for char in self.show_if_contains)
+
+
+class FilterLayer(ABC):
+    """
+    フィルタリングの1階層(レイヤー)を表す抽象基底クラス。
+    """
+    def __init__(self, priority: int):
+        self.priority = priority
+
+    @abstractmethod
+    def is_applicable(self, query: str, actions: List[Action]) -> bool:
+        """このレイヤーを適用すべき状況か判定する。"""
+        pass
+
+    @abstractmethod
+    def apply(self, query: str, actions: List[Action]) -> List[Action]:
+        """アクションをフィルタリングする。"""
+        pass
+
+
+class NewlineLayer(FilterLayer):
+    """
+    改行が含まれる場合、クリップボード用アクションのみを独占表示するレイヤー。
+    """
+    def __init__(self):
+        super().__init__(priority=100)
+
+    def is_applicable(self, query: str, actions: List[Action]) -> bool:
+        return "\n" in query
+
+    def apply(self, query: str, actions: List[Action]) -> List[Action]:
+        return [a for a in actions if a.copy_to_clipboard]
+
+
+class ConstraintLayer(FilterLayer):
+    """
+    クエリが制約文字に合致した場合、そのアクションのみを独占表示するレイヤー。
+    """
+    def __init__(self):
+        super().__init__(priority=50)
+
+    def is_applicable(self, query: str, actions: List[Action]) -> bool:
+        return any(a.matches_constraint(query) for a in actions if a.show_if_contains)
+
+    def apply(self, query: str, actions: List[Action]) -> List[Action]:
+        return [a for a in actions if a.show_if_contains and a.matches_constraint(query)]
+
+
+class DefaultLayer(FilterLayer):
+    """
+    制約を持たないアクションを標準表示するレイヤー。
+    """
+    def __init__(self):
+        super().__init__(priority=0)
+
+    def is_applicable(self, query: str, actions: List[Action]) -> bool:
+        return True
+
+    def apply(self, query: str, actions: List[Action]) -> List[Action]:
+        # 制約を持たないもの、または適合する上位レイヤーがない場合のフォールバック
+        return [a for a in actions if not a.show_if_contains]
 
 
 class ActionRepository:
     """
-    設定ファイル(JSON)からActionコレクションを読み込み・管理するリポジトリ。
+    設定ファイルからActionコレクションを読み込む。
     """
     def __init__(self, config_path: str):
         self.config_path = config_path
+        self._cached_actions: Optional[List[Action]] = None
 
     def list_all(self) -> List[Action]:
+        if self._cached_actions is not None:
+            return self._cached_actions
+
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:
                 data: Dict[str, Any] = json.load(f)
@@ -55,34 +117,40 @@ class ActionRepository:
             sys.exit(1)
 
         actions_data: List[Dict[str, Any]] = data.get("actions", [])
-        return [Action(a) for a in actions_data]
+        self._cached_actions = [Action(a) for a in actions_data]
+        return self._cached_actions
 
 
 class ActionFilter:
     """
-    クエリに基づき、アクションを抽出する純粋なドメインロジック。
+    優先度付きレイヤーを用いてアクションをフィルタリングする。
     """
-    @staticmethod
-    def filter(actions: List[Action], query: str) -> List[Action]:
-        # 1. 改行が含まれる場合：クリップボードコピー対応のアクションのみを強制抽出
-        if "\n" in query:
-            return [a for a in actions if a.is_clipboard_only()]
+    def __init__(self):
+        # 優先度順にレイヤーを保持
+        self.layers: List[FilterLayer] = sorted(
+            [NewlineLayer(), ConstraintLayer(), DefaultLayer()],
+            key=lambda l: l.priority,
+            reverse=True
+        )
 
-        # 2. 改行がない場合：show_if_contains 制約を満たすもののみを抽出
-        # （ラベル名による部分一致検索は行わない）
-        return [a for a in actions if a.matches_constraint(query)]
+    def filter(self, query: str, actions: List[Action]) -> List[Action]:
+        for layer in self.layers:
+            if layer.is_applicable(query, actions):
+                return layer.apply(query, actions)
+        return []
 
 
 class ActionOrchestrator:
     """
-    データのロードからフィルタリング、出力までのパイプラインを指揮する。
+    全体のパイプラインを指揮する。
     """
     @staticmethod
     def run(query: str, config_path: str) -> None:
         repo = ActionRepository(config_path)
-        all_actions = repo.list_all()
+        actions = repo.list_all()
         
-        filtered_actions = ActionFilter.filter(all_actions, query)
+        filter_engine = ActionFilter()
+        filtered_actions = filter_engine.filter(query, actions)
         
         for action in filtered_actions:
             print(action.label)

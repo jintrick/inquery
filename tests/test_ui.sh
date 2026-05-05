@@ -13,16 +13,21 @@ trap 'rm -rf "$TEST_DIR"' EXIT
 # Create mock zenity
 cat << 'EOF' > "$TEST_DIR/mock_bin/zenity"
 #!/bin/bash
-# Use the exported TEST_DIR variable
 if [[ "$*" == *"--list"* ]]; then
-    # Capture stdin (labels)
     cat > "$TEST_DIR/zenity_labels"
-    # Return a selection that exists in default config to avoid executor error
     echo "Googleで検索"
 fi
 exit 0
 EOF
 chmod +x "$TEST_DIR/mock_bin/zenity"
+
+# Create mock xdg-open to prevent browser popups
+cat << 'EOF' > "$TEST_DIR/mock_bin/xdg-open"
+#!/bin/bash
+echo "Mock xdg-open called with: $*" > "$TEST_DIR/xdg_open_called"
+exit 0
+EOF
+chmod +x "$TEST_DIR/mock_bin/xdg-open"
 
 # 1. Test Config Fallback (Default)
 echo "Testing Default Config Fallback..."

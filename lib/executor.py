@@ -2,7 +2,10 @@ import sys
 import subprocess
 import urllib.parse
 import os
-from lib.actions import ActionRepository, Action
+try:
+    from lib.actions import ActionRepository, Action, ActionFilter
+except ImportError:
+    from actions import ActionRepository, Action, ActionFilter
 
 def notify_error(message: str) -> None:
     """Displays an error message using zenity."""
@@ -19,24 +22,27 @@ def execute() -> None:
 
     try:
         repo = ActionRepository(config_path)
-        all_actions = repo.list_all()
+        actions = repo.list_all()
+        
+        filter_engine = ActionFilter()
+        candidates = filter_engine.filter(query, actions)
+            
+        action: Action = next(
+            (a for a in candidates if a.label == label), None
+        )
     except Exception as err:
-        print(f"設定ファイルの読み込みに失敗しました:\n{err}", file=sys.stderr)
-        notify_error(f"設定ファイルの読み込みに失敗しました:\n{err}")
+        print(f"アクションの取得に失敗しました:\n{err}", file=sys.stderr)
+        notify_error(f"アクションの取得に失敗しました:\n{err}")
         sys.exit(1)
 
-    action: Action = next(
-        (a for a in all_actions if a.label == label), None
-    )
-
     if not action:
-        print(f"アクションが見つかりません: {label}", file=sys.stderr)
-        notify_error(f"アクションが見つかりません: {label}")
+        print(f"アクションが見つからないか、現在のクエリでは実行できません: {label}", file=sys.stderr)
+        notify_error(f"アクションが見つからないか、現在のクエリでは実行できません: {label}")
         sys.exit(1)
 
     # クリップボードへのコピー処理
     # 改行が含まれる場合は強制コピー、それ以外はアクションの設定に従う
-    if action.is_clipboard_only() or "\n" in query:
+    if action.copy_to_clipboard or "\n" in query:
         query_bytes = query.encode("utf-8")
         try:
             result = subprocess.run(

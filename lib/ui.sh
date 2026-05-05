@@ -41,8 +41,18 @@ ZENITY_EXIT=$?
 
 # If an action was selected, execute it
 if [ $ZENITY_EXIT -eq 0 ] && [ -n "$SELECTED_LABEL" ]; then
-    python3 "$EXECUTOR_SCRIPT" "$SELECTED_LABEL" "$QUERY" "$CONFIG_FILE"
-    exit $?
+    python3 "$EXECUTOR_SCRIPT" "$SELECTED_LABEL" "$QUERY" "$CONFIG_FILE" 2>"$ERR_FILE"
+    EXEC_EXIT=$?
+    if [ $EXEC_EXIT -ne 0 ]; then
+        ERR_MSG=$(cat "$ERR_FILE")
+        if [ -n "$ERR_MSG" ]; then
+            zenity --error --text="アクションの実行中にエラーが発生しました:\n$ERR_MSG"
+        fi
+        rm -f "$ERR_FILE"
+        exit 2
+    fi
+    rm -f "$ERR_FILE"
+    exit 0
 else
     exit 1
 fi
