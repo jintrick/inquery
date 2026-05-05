@@ -29,22 +29,36 @@ while true; do
             fi
 
             # 第二階層でのアクション選択
+            # ui.sh は成功時(0)、キャンセル時(1)、エラー時(2以上)を返す
             bash "$APP_ROOT/lib/ui.sh" "$QUERY" "$APP_ROOT"
-            
-            # 成功ならアプリ終了、キャンセル(非0)なら第二階層(複数行入力)をループ継続
-            if [ $? -eq 0 ]; then
+            EXIT_CODE=$?
+
+            if [ $EXIT_CODE -eq 0 ]; then
                 exit 0
             fi
-        done
-        # 第二階層を抜けたので第一階層の先頭へ
-        continue
-    fi
 
-    # 第一階層でのアクション選択
-    bash "$APP_ROOT/lib/ui.sh" "$QUERY" "$APP_ROOT"
-    
-    # 成功ならアプリ終了、キャンセル(非0)なら第一階層(1行入力)をループ継続
-    if [ $? -eq 0 ]; then
-        exit 0
-    fi
-done
+            # キャンセル(1)以外なら、エラーとしてアプリ終了
+            # これにより設定エラー等による無限ループを防止する
+            if [ $EXIT_CODE -ne 1 ]; then
+                exit $EXIT_CODE
+            fi
+            # キャンセル(1)の場合はループ継続 (複数行入力画面へ戻る)
+            done
+            # 第二階層を抜けたので第一階層の先頭へ
+            continue
+            fi
+
+            # 第一階層でのアクション選択
+            bash "$APP_ROOT/lib/ui.sh" "$QUERY" "$APP_ROOT"
+            EXIT_CODE=$?
+
+            if [ $EXIT_CODE -eq 0 ]; then
+                exit 0
+            fi
+
+            # キャンセル(1)以外なら、エラーとしてアプリ終了
+            if [ $EXIT_CODE -ne 1 ]; then
+                exit $EXIT_CODE
+            fi
+            # キャンセル(1)の場合はループ継続 (1行入力画面へ戻る)
+            done

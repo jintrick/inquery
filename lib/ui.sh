@@ -23,12 +23,17 @@ else
 fi
 
 # Extract labels using separate filter script
-LABELS=$(python3 "$FILTER_SCRIPT" "$QUERY" "$CONFIG_FILE")
+ERR_FILE="/tmp/inquery_err.$$"
+LABELS=$(python3 "$FILTER_SCRIPT" "$QUERY" "$CONFIG_FILE" 2>"$ERR_FILE")
+FILTER_EXIT=$?
 
-if [ $? -ne 0 ]; then
-    # Error message is likely already printed to stderr by python script
-    exit 1
+if [ $FILTER_EXIT -ne 0 ]; then
+    ERR_MSG=$(cat "$ERR_FILE")
+    zenity --error --text="フィルタリング中にエラーが発生しました:\n$ERR_MSG"
+    rm -f "$ERR_FILE"
+    exit 2
 fi
+rm -f "$ERR_FILE"
 
 # Show selection list
 SELECTED_LABEL=$(echo "$LABELS" | zenity --list --title="inquery - $QUERY" --column="アクション" --width=800 --height=300 --text="実行するアクションを選択してください:")
