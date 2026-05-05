@@ -83,6 +83,8 @@ inquery/
 - **Quality Assurance**: 
     - 変更時は必ず `scripts/run_tests.sh` をパスさせること。
     - インストーラーやパス解決の挙動は `tests/` 内の統合テストで担保せよ。
+- **Git Workflow**:
+    - デフォルトブランチは `master` を使用せよ。`main` は使用しない。
 
 ---
 

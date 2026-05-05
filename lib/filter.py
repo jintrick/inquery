@@ -17,6 +17,10 @@ def filter_actions(query: str, config_path: str) -> List[str]:
 
     actions: List[Dict[str, Any]] = data.get("actions", [])
     
+    # 改行が含まれる場合、copy_to_clipboard: true のアクションのみに絞り込み、そのまま返す
+    if "\n" in query:
+        return [a["label"] for a in actions if a.get("copy_to_clipboard") is True]
+
     if not query:
         return [a["label"] for a in actions]
 

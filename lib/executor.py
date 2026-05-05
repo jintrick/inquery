@@ -37,7 +37,8 @@ def execute() -> None:
         sys.exit(1)
 
     # クリップボードへのコピー処理
-    if action.get("copy_to_clipboard"):
+    # 改行が含まれる場合は強制コピー、それ以外はアクションの設定に従う
+    if action.get("copy_to_clipboard") or "\n" in query:
         query_bytes = query.encode("utf-8")
         try:
             result = subprocess.run(

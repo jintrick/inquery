@@ -31,9 +31,13 @@ if [ $? -ne 0 ]; then
 fi
 
 # Show selection list
-SELECTED_LABEL=$(echo "$LABELS" | zenity --list --title="inquery - $QUERY" --column="アクション" --width=400 --height=300 --text="実行するアクションを選択してください:")
+SELECTED_LABEL=$(echo "$LABELS" | zenity --list --title="inquery - $QUERY" --column="アクション" --width=800 --height=300 --text="実行するアクションを選択してください:")
+ZENITY_EXIT=$?
 
 # If an action was selected, execute it
-if [ $? -eq 0 ] && [ -n "$SELECTED_LABEL" ]; then
+if [ $ZENITY_EXIT -eq 0 ] && [ -n "$SELECTED_LABEL" ]; then
     python3 "$EXECUTOR_SCRIPT" "$SELECTED_LABEL" "$QUERY" "$CONFIG_FILE"
+    exit $?
+else
+    exit 1
 fi
