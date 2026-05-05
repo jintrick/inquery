@@ -3,7 +3,7 @@
 
 QUERY="$1"
 APP_ROOT="${2:-$(cd "$(dirname "$0")/.." && pwd)}"
-FILTER_SCRIPT="$APP_ROOT/lib/filter.py"
+FILTER_SCRIPT="$APP_ROOT/lib/actions.py"
 EXECUTOR_SCRIPT="$APP_ROOT/lib/executor.py"
 
 # Configuration fallback logic
