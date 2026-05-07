@@ -26,15 +26,37 @@ cd inquery
 - 長文の翻訳や、コードの整形などに便利です。
 - 複数行入力時は、設定ファイルで `copy_to_clipboard: true` が設定されているアクションのみが選択肢として表示されます。
 
-## カスタマイズ
+### 設定例 (`actions.json`)
 
-自分専用の検索アクションを追加するには、設定ファイルを作成します。
+1つのスクリプトに対し、引数（`args`）を切り替えることで異なる動作（例：大文字変換・小文字変換）をさせる設定例です。
 
-```bash
-mkdir -p ~/.config/inquery
-cp config/actions.json.example ~/.config/inquery/actions.json
+```json
+{
+  "actions": [
+    {
+      "label": "Googleで検索",
+      "url": "https://www.google.com/search?q={query}"
+    },
+    {
+      "label": "大文字に変換",
+      "script": "~/.config/inquery/scripts/convert.sh",
+      "args": ["--upper", "{query}"]
+    },
+    {
+      "label": "小文字に変換",
+      "script": "~/.config/inquery/scripts/convert.sh",
+      "args": ["--lower", "{query}"]
+    }
+  ]
+}
 ```
-その後、`~/.config/inquery/actions.json` を自由に編集してください。
+
+- **`url`**: ブラウザで開くURL。`{query}` はURLエンコードされて埋め込まれます。
+- **`script`**: 実行ファイルのパス。`~`（ホームディレクトリ）を使用可能です。
+- **`args`**: スクリプトに渡す引数のリスト。
+    - `{query}` はユーザーが入力した文字列に置換されます。
+    - **スクリプト側の受け取り**: 上記の「大文字に変換」の場合、スクリプト内では `$1` に `--upper`、`$2` に入力した文字列が格納されます。
+    - **安全性**: 引数をリスト形式（`["--upper", "{query}"]`）で記述することで、入力内容にスペースが含まれていても、シェルインジェクションを防ぎ安全に処理されます。
 
 ---
 

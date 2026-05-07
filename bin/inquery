@@ -8,15 +8,15 @@ QUERY=""
 
 # 第一階層: Entryモード (1行入力)
 while true; do
-    QUERY=$(zenity --entry --title="inquery ('..' for multi-line)" --text="" --entry-text="$QUERY" --width=800)
+    QUERY=$(zenity --entry --title="inquery (empty for multi-line)" --text="" --entry-text="$QUERY" --width=800)
     
     # 入力でキャンセルされたらアプリ終了
     if [ $? -ne 0 ]; then
         exit 0
     fi
 
-    # ".." なら第二階層 (Multi-lineモード) へ
-    if [ "$QUERY" = ".." ]; then
+    # 空入力なら第二階層 (Multi-lineモード) へ
+    if [ -z "$QUERY" ]; then
         QUERY="" # 複数行モードの初期値は空
         while true; do
             # text-infoはパイプで初期値を渡す (-n で改行付加を防止)
